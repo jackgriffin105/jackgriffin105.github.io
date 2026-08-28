@@ -2,7 +2,35 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Icon from '../components/Icon.astro';
 import { profile } from '../data/profile';
-import { projects } from '../data/projects';
+
+// Projects come from the canonical feed on the main portfolio, fetched at build
+// time — one source of truth (adityajain.me → src/data/projects.ts, served at
+// /projects.json). Image URLs in the feed are already absolute
+// (https://adityajain.me/img/...), so no assets are duplicated here.
+//
+// If the feed is unreachable we fail the build loudly rather than publish an
+// empty projects page — GitHub Pages keeps the last successful deploy, so the
+// live site is never left blank. Override the URL for local testing with
+// `PROJECTS_FEED=http://localhost:4321/projects.json npm run build`.
+interface Project {
+  title: string;
+  description: string;
+  href: string;
+  image?: string;
+  demo?: string;
+  blog?: string;
+  tags: string[];
+}
+
+const PROJECTS_FEED = import.meta.env.PROJECTS_FEED ?? 'https://adityajain.me/projects.json';
+const res = await fetch(PROJECTS_FEED);
+if (!res.ok) {
+  throw new Error(`Failed to fetch project feed ${PROJECTS_FEED}: ${res.status} ${res.statusText}`);
+}
+const projects: Project[] = await res.json();
+if (!Array.isArray(projects) || projects.length === 0) {
+  throw new Error(`Project feed ${PROJECTS_FEED} returned no projects`);
+}
 ---
 
 <BaseLayout
