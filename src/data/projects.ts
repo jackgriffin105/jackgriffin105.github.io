@@ -19,10 +19,21 @@ export interface Project {
 
 export const projects: Project[] = [
   {
+    title: 'Portfolio Chatbot — Agentic RAG',
+    description:
+      'A retrieval-augmented, agentic assistant for my site, built from scratch (no LangChain): a ReAct agent that searches a crawl of my blog and can email me, with tools exposed over MCP and streamed to an embeddable chat widget. Runs on a fully-free stack — FastAPI on Render, Gemini for generation and embeddings.',
+    href: 'https://github.com/adityajn105/portfolio-chatbot',
+    image: '/img/portfolio-chatbot.png',
+    demo: 'https://chat.adityajain.me',
+    blog: 'https://adityajain.me/blogs/building-a-portfolio-chatbot.html',
+    tags: ['RAG', 'Agents', 'MCP'],
+  },
+  {
     title: 'TradeBuddy — Stock Analysis',
     description:
       'A client-side stock-analysis tool: enter a US ticker to get support/resistance zones, entry/stop/target levels, risk:reward, and position sizing. All math runs in the browser and shows its work — the formula and source behind every number. Not financial advice.',
     href: 'https://github.com/adityajn105/trade-buddy',
+    image: '/img/trade-buddy.png',
     demo: 'https://trade-buddy.adityajain.me/',
     tags: ['JavaScript', 'Technical Analysis', 'Charts'],
   },
