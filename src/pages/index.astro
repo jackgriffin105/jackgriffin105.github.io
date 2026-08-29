@@ -1,70 +1,206 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Icon from '../components/Icon.astro';
 import { profile } from '../data/profile';
+import { projects, allProjectsUrl } from '../data/projects';
+import { skillGroups } from '../data/skills';
+import { experience, education } from '../data/experience';
+import { viewsFor, formatViews } from '../data/views';
 
-// Projects are fetched LIVE from the canonical feed on the main portfolio when
-// the page loads in the browser (see the <script> at the bottom) — one source of
-// truth (adityajain.me → src/data/projects.ts, served at /projects.json), always
-// current with no rebuild of this site. Image URLs in the feed are already
-// absolute (https://adityajain.me/img/...). GitHub Pages serves the feed with
-// `Access-Control-Allow-Origin: *`, so the cross-origin fetch works from here.
-// This page ships as a static shell + loading state; cards render client-side.
+// Homepage highlights the 5 most recent posts. The full archive lives at
+// /blogs.html (ordered most-viewed first).
+const recentPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 5);
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 ---
 
 <BaseLayout
-  title="Projects — Aditya Jain"
-  description="A showcase of Aditya Jain's projects across machine learning, deep learning, reinforcement learning, computer vision, NLP, and more."
+  title="Aditya Jain — ML / AI Engineer"
+  description="Aditya Jain is a machine learning and AI engineer (MTS @ Salesforce, MSCS @ USC). Explore projects, blogs on deep learning and reinforcement learning, and more."
 >
-  <!-- ============================ HERO ============================ -->
+  <!-- ============================ HERO / ABOUT ============================ -->
   <section class="hero section" id="about">
-    <div class="container">
-      <p class="eyebrow" data-reveal>Selected work</p>
-      <h1 class="hero-title" data-reveal>Projects</h1>
-      {profile.bio.map((p) => <p class="hero-bio" data-reveal>{p}</p>)}
-      <div class="hero-cta" data-reveal>
-        <a href="https://adityajain.me" class="btn btn-primary">
-          <Icon name="arrow" size={16} class="arrow-back" /> Back to portfolio
-        </a>
-        <a href="#projects" class="btn btn-ghost">Browse projects</a>
+    <div class="container hero-grid">
+      <div class="hero-text">
+        <p class="eyebrow" data-reveal>{profile.tagline}</p>
+        <h1 class="hero-title" data-reveal>
+          Hi, I'm {profile.name}.<br />
+          I build <span class="accent">machine&nbsp;learning</span> that ships.
+        </h1>
+        {profile.bio.map((p) => <p class="hero-bio" data-reveal>{p}</p>)}
+        <div class="hero-cta" data-reveal>
+          <a href={profile.resume} class="btn btn-primary" target="_blank" rel="noopener">
+            View résumé <Icon name="arrow" size={16} />
+          </a>
+          <a href="#contact" class="btn btn-ghost">Get in touch</a>
+        </div>
+        <ul class="hero-social" data-reveal aria-label="Social links">
+          {
+            profile.socials.map((s) => (
+              <li>
+                <a href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.name}>
+                  <Icon name={s.icon} size={20} />
+                </a>
+              </li>
+            ))
+          }
+        </ul>
       </div>
-      <ul class="hero-social" data-reveal aria-label="Social links">
+      <div class="hero-photo" data-reveal>
+        <img
+          src="/img/profile.png"
+          width="420"
+          height="420"
+          alt="Portrait of Aditya Jain"
+          fetchpriority="high"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ BLOG ============================ -->
+  <section class="section section-alt" id="blog">
+    <div class="container">
+      <p class="eyebrow" data-reveal>Writing</p>
+      <h2 class="section-title" data-reveal>Blog</h2>
+      <div class="post-list">
         {
-          profile.socials.map((s) => (
-            <li>
-              <a href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.name}>
-                <Icon name={s.icon} size={20} />
-              </a>
-            </li>
+          recentPosts.map((post) => (
+            <div class="post-row" data-reveal>
+              <div class="post-main">
+                <h3>
+                  <a class="post-link" href={`/blogs/${post.id}.html`}>{post.data.title}</a>
+                </h3>
+                <p>{post.data.description}</p>
+                {post.data.tags.length > 0 && (
+                  <ul class="post-tags">
+                    {post.data.tags.map((t) => (
+                      <li>
+                        <a class="post-tag" href={`/blogs.html?tag=${encodeURIComponent(t)}`}>
+                          {t}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div class="post-meta">
+                {viewsFor(post.id) > 0 && (
+                  <span class="post-views">{formatViews(viewsFor(post.id))} views</span>
+                )}
+                <time datetime={post.data.pubDate.toISOString()}>{fmt(post.data.pubDate)}</time>
+                <Icon name="arrow" size={16} class="post-arrow" />
+              </div>
+            </div>
           ))
         }
-      </ul>
+      </div>
+      <div class="center" data-reveal>
+        <a href="/blogs.html" class="btn btn-ghost">
+          View all posts <Icon name="arrow" size={16} />
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ SKILLS ============================ -->
+  <section class="section" id="skills">
+    <div class="container">
+      <p class="eyebrow" data-reveal>Toolbox</p>
+      <h2 class="section-title" data-reveal>Skills</h2>
+      <div class="skills-grid">
+        {
+          skillGroups.map((g) => (
+            <div class="skill-group" data-reveal>
+              <h3 class="skill-cat">{g.category}</h3>
+              <ul class="tag-row">
+                {g.items.map((i) => <li class="tag">{i}</li>)}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
     </div>
   </section>
 
   <!-- ============================ PROJECTS ============================ -->
-  <!-- Cards are fetched LIVE from adityajain.me/projects.json on load; the
-       markup below is a static shell + loading state. See the <script> at the
-       bottom of this file for the fetch + render logic. -->
   <section class="section section-alt" id="projects">
     <div class="container">
-      <p class="eyebrow" data-reveal id="proj-count">Projects</p>
-      <h2 class="section-title" data-reveal>Everything I've built</h2>
-      <div class="proj-grid" id="proj-grid" aria-busy="true" aria-live="polite">
-        <p class="proj-status">Loading projects…</p>
+      <p class="eyebrow" data-reveal>Selected work</p>
+      <h2 class="section-title" data-reveal>Projects</h2>
+      <div class="card-grid">
+        {
+          projects.slice(0, 6).map((p) => (
+            <a class="card" href={p.href} target="_blank" rel="noopener noreferrer" data-reveal>
+              <div class="card-head">
+                <h3>{p.title}</h3>
+                <Icon name="arrow" size={16} class="card-arrow" />
+              </div>
+              <p class="card-desc">{p.description}</p>
+              <p class="card-tags">{p.tags.join(' · ')}</p>
+            </a>
+          ))
+        }
+      </div>
+      <div class="center" data-reveal>
+        <a href={allProjectsUrl} class="btn btn-ghost" target="_blank" rel="noopener">
+          View all projects <Icon name="arrow" size={16} />
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ EXPERIENCE + EDUCATION ============================ -->
+  <section class="section" id="experience">
+    <div class="container two-col">
+      <div>
+        <p class="eyebrow" data-reveal>Career</p>
+        <h2 class="section-title" data-reveal>Experience</h2>
+        <ol class="timeline">
+          {
+            experience.map((e) => (
+              <li class="timeline-item" data-reveal>
+                <span class="timeline-period">{e.period}</span>
+                <h3 class="timeline-role">{e.role}</h3>
+                <p class="timeline-org">{e.org}</p>
+                <p class="timeline-loc">{e.location}</p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+      <div>
+        <p class="eyebrow" data-reveal>Academics</p>
+        <h2 class="section-title" data-reveal>Education</h2>
+        <ol class="timeline">
+          {
+            education.map((e) => (
+              <li class="timeline-item" data-reveal>
+                <span class="timeline-period">{e.period}</span>
+                <h3 class="timeline-role">{e.role}</h3>
+                <p class="timeline-org">{e.org}</p>
+                <p class="timeline-loc">{e.location}</p>
+              </li>
+            ))
+          }
+        </ol>
       </div>
     </div>
   </section>
 
   <!-- ============================ CONTACT ============================ -->
-  <section class="section" id="contact">
+  <section class="section section-alt" id="contact">
     <div class="container contact-grid">
       <div>
         <p class="eyebrow" data-reveal>Say hello</p>
         <h2 class="section-title" data-reveal>Get in touch</h2>
         <p class="contact-lede" data-reveal>
-          Interested in one of these projects, or want to collaborate? Drop a message and I'll
-          get back to you.
+          Have an opportunity, a question, or just want to talk ML? Drop a message and I'll get
+          back to you.
         </p>
         <ul class="contact-details" data-reveal>
           <li>
@@ -77,8 +213,13 @@ import { profile } from '../data/profile';
           </li>
         </ul>
       </div>
-      <form class="contact-form" action={profile.formspree} method="POST" data-reveal>
-        <input type="hidden" name="_subject" value="Contact request from projects.adityajain.me" />
+      <form
+        class="contact-form"
+        action={profile.formspree}
+        method="POST"
+        data-reveal
+      >
+        <input type="hidden" name="_subject" value="Contact request from adityajain.me" />
         <div class="field">
           <label for="email">Email</label>
           <input type="email" name="email" id="email" required placeholder="you@example.com" />
@@ -92,75 +233,6 @@ import { profile } from '../data/profile';
       </form>
     </div>
   </section>
-
-  <script>
-    // Render the projects live from the canonical feed on the main portfolio.
-    // One source of truth (adityajain.me/projects.json) — this page never goes
-    // stale and needs no rebuild when the list changes. GitHub Pages serves the
-    // feed with `Access-Control-Allow-Origin: *`, so this cross-origin fetch works.
-    const FEED = 'https://adityajain.me/projects.json';
-    const grid = document.getElementById('proj-grid');
-    const countEl = document.getElementById('proj-count');
-
-    // Escape untrusted feed values before interpolating into HTML strings.
-    const esc = (s) =>
-      String(s ?? '').replace(
-        /[&<>"']/g,
-        (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-      );
-
-    // Inlined SVGs (mirror src/components/Icon.astro's ui glyphs) so injected
-    // cards need no Astro components at runtime.
-    const ARROW =
-      '<svg class="card-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
-    const EXTERNAL =
-      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>';
-
-    function cardHTML(p) {
-      const media = p.image
-        ? `<div class="card-media"><img src="${esc(p.image)}" alt="${esc(p.title)} preview" loading="lazy"></div>`
-        : '';
-      const chips = [];
-      if (p.demo)
-        chips.push(
-          `<a class="card-chip" href="${esc(p.demo)}" target="_blank" rel="noopener noreferrer">Demo ${EXTERNAL}</a>`,
-        );
-      if (p.blog)
-        chips.push(
-          `<a class="card-chip" href="${esc(p.blog)}" target="_blank" rel="noopener noreferrer">Blog ${EXTERNAL}</a>`,
-        );
-      const links = chips.length ? `<div class="card-links">${chips.join('')}</div>` : '';
-      const tags = Array.isArray(p.tags) ? p.tags.map(esc).join(' · ') : '';
-      return `<article class="card">${media}<div class="card-body"><div class="card-head"><h3><a class="card-link" href="${esc(
-        p.href,
-      )}" target="_blank" rel="noopener noreferrer">${esc(
-        p.title,
-      )}</a></h3>${ARROW}</div><p class="card-desc">${esc(
-        p.description,
-      )}</p><div class="card-foot"><p class="card-tags">${tags}</p>${links}</div></div></article>`;
-    }
-
-    async function loadProjects() {
-      if (!grid) return;
-      try {
-        const res = await fetch(FEED, { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const projects = await res.json();
-        if (!Array.isArray(projects) || projects.length === 0) throw new Error('empty feed');
-        grid.innerHTML = projects.map(cardHTML).join('');
-        // Stagger the fade-in (see #projects .card animation in the global styles).
-        grid.querySelectorAll('.card').forEach((el, i) => el.style.setProperty('--i', String(i)));
-        grid.setAttribute('aria-busy', 'false');
-        if (countEl) countEl.textContent = `${projects.length} projects`;
-      } catch {
-        grid.innerHTML =
-          '<p class="proj-status proj-error">Couldn’t load projects right now — see them all on <a href="https://adityajain.me" target="_blank" rel="noopener">adityajain.me</a>.</p>';
-        grid.setAttribute('aria-busy', 'false');
-      }
-    }
-
-    loadProjects();
-  </script>
 </BaseLayout>
 
 <style>
@@ -168,24 +240,29 @@ import { profile } from '../data/profile';
   .hero {
     padding-top: clamp(3rem, 7vw, 5.5rem);
   }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: center;
+  }
   .hero-title {
-    font-size: clamp(2.4rem, 6vw, 3.6rem);
-    margin-block: 0.5rem 1.3rem;
+    font-size: clamp(2.1rem, 5.5vw, 3.4rem);
+    margin-block: 0.5rem 1.5rem;
+  }
+  .hero-title .accent {
+    color: var(--accent);
   }
   .hero-bio {
     color: var(--text-muted);
-    max-width: 60ch;
+    max-width: 44ch;
     margin-bottom: 1rem;
   }
   .hero-cta {
     display: flex;
     flex-wrap: wrap;
     gap: 0.8rem;
-    margin-top: 1.6rem;
-  }
-  /* Point the shared right-arrow glyph back to the left for "Back". */
-  .arrow-back {
-    transform: rotate(180deg);
+    margin-top: 1.8rem;
   }
   .hero-social {
     display: flex;
@@ -210,10 +287,279 @@ import { profile } from '../data/profile';
     border-color: var(--accent);
     transform: translateY(-2px);
   }
+  .hero-photo img {
+    width: 100%;
+    max-width: 380px;
+    margin-inline: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+  }
 
+  /* ---------- Section backgrounds ---------- */
   .section-alt {
     background: var(--bg-subtle);
     border-block: 1px solid var(--border);
+  }
+  .center {
+    text-align: center;
+    margin-top: 2.5rem;
+  }
+
+  /* ---------- Project cards (bento — mixed tile sizes) ---------- */
+  /* Every tile covers the SAME area (2 grid cells) but a different shape —
+     wide (2×1) or tall (1×2) — so the wall looks varied, not uniform, while
+     each card gets equal visual weight. No gaps. */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 12rem);
+    grid-template-areas:
+      'a a b c'
+      'd e b c'
+      'd e f f';
+    gap: 1rem;
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 1.4rem 1.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text);
+    overflow: hidden;
+    transition: border-color 0.2s var(--ease), transform 0.2s var(--ease),
+      box-shadow 0.2s var(--ease);
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    color: var(--text);
+  }
+  .card:nth-child(1) { grid-area: a; }
+  .card:nth-child(2) { grid-area: b; }
+  .card:nth-child(3) { grid-area: c; }
+  .card:nth-child(4) { grid-area: d; }
+  .card:nth-child(5) { grid-area: e; }
+  .card:nth-child(6) { grid-area: f; }
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .card-head h3 {
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+  }
+  /* Up-right arrow hints at an external link; nudges on hover. */
+  .card-arrow {
+    color: var(--text-faint);
+    flex-shrink: 0;
+    transform: rotate(-45deg);
+    transition: color 0.2s var(--ease), transform 0.2s var(--ease);
+  }
+  .card:hover .card-arrow {
+    color: var(--accent);
+    transform: rotate(-45deg) translateX(3px);
+  }
+  .card-desc {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-tags {
+    margin-top: auto;
+    padding-top: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.01em;
+    color: var(--text-faint);
+  }
+
+  /* ---------- Tags ---------- */
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    list-style: none;
+    padding: 0;
+    margin-top: auto;
+  }
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.01em;
+    padding: 0.28rem 0.6rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* ---------- Skills ---------- */
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+  .skill-cat {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .skill-group .tag {
+    background: var(--bg-elevated);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-size: 0.82rem;
+  }
+
+  /* ---------- Blog list ---------- */
+  .post-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .post-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.4rem 0;
+    border-top: 1px solid var(--border);
+    color: var(--text);
+  }
+  .post-row:last-child {
+    border-bottom: 1px solid var(--border);
+  }
+  .post-main h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.3rem;
+    transition: color 0.15s var(--ease);
+  }
+  /* Stretched title link: covers the whole row so any non-interactive area
+     opens the post, while tag links stay clickable above it. */
+  .post-link {
+    color: inherit;
+  }
+  .post-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .post-row:hover .post-main h3 {
+    color: var(--accent);
+  }
+  .post-main p {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    max-width: 65ch;
+  }
+  .post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    padding: 0;
+    margin-top: 0.7rem;
+  }
+  .post-tag {
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.01em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .post-tag:hover {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .post-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    flex-shrink: 0;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+  }
+  .post-views {
+    white-space: nowrap;
+  }
+  .post-views::after {
+    content: '·';
+    margin-left: 0.9rem;
+    color: var(--text-faint);
+  }
+  .post-arrow {
+    transition: transform 0.2s var(--ease);
+  }
+  .post-row:hover .post-arrow {
+    transform: translateX(4px);
+    color: var(--accent);
+  }
+
+  /* ---------- Timeline ---------- */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: start;
+  }
+  .timeline {
+    list-style: none;
+    padding: 0;
+    border-left: 1px solid var(--border);
+  }
+  .timeline-item {
+    position: relative;
+    padding: 0 0 1.8rem 1.5rem;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 6px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--bg);
+  }
+  .timeline-period {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--text-faint);
+  }
+  .timeline-role {
+    font-size: 1.05rem;
+    margin-top: 0.2rem;
+  }
+  .timeline-org {
+    color: var(--accent);
+    font-size: 0.92rem;
+    font-weight: 500;
+  }
+  .timeline-loc {
+    color: var(--text-muted);
+    font-size: 0.85rem;
   }
 
   /* ---------- Contact ---------- */
@@ -281,166 +627,56 @@ import { profile } from '../data/profile';
     align-self: flex-start;
   }
 
+  /* ---------- Responsive ---------- */
   @media (max-width: 860px) {
+    .hero-grid,
+    .two-col,
     .contact-grid {
       grid-template-columns: 1fr;
     }
-  }
-</style>
-
-<!-- Project cards are injected client-side (fetched from adityajain.me), so they
-     lack Astro's scoped data-astro-cid-* attributes — their styles must be global.
-     Namespaced under #projects so nothing leaks into the rest of the page. -->
-<style is:global>
-  #projects .proj-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.4rem;
-    align-items: start;
-  }
-  #projects .proj-status {
-    grid-column: 1 / -1;
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    padding: 0.5rem 0 1rem;
-  }
-  #projects .proj-status.proj-error a {
-    color: var(--accent);
-  }
-  #projects .card {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: var(--bg-elevated);
-    color: var(--text);
-    overflow: hidden;
-    transition: border-color 0.2s var(--ease), transform 0.2s var(--ease),
-      box-shadow 0.2s var(--ease);
-  }
-  #projects .card:hover {
-    border-color: var(--accent);
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-md);
-  }
-  #projects .card-media {
-    aspect-ratio: 16 / 9;
-    background: var(--bg-subtle);
-    border-bottom: 1px solid var(--border);
-    overflow: hidden;
-  }
-  #projects .card-media img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.3s var(--ease);
-  }
-  #projects .card:hover .card-media img {
-    transform: scale(1.04);
-  }
-  #projects .card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-    padding: 1.3rem 1.4rem;
-    flex: 1;
-  }
-  #projects .card-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.75rem;
-  }
-  #projects .card-head h3 {
-    font-size: 1.05rem;
-    letter-spacing: -0.01em;
-    line-height: 1.35;
-  }
-  /* Stretched title link: the whole card opens the repo, while Demo/Blog
-     chips sit above it and stay independently clickable. */
-  #projects .card-link {
-    color: inherit;
-  }
-  #projects .card-link::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-  }
-  #projects .card:hover .card-head h3 {
-    color: var(--accent);
-  }
-  #projects .card-arrow {
-    color: var(--text-faint);
-    flex-shrink: 0;
-    margin-top: 0.15rem;
-    transform: rotate(-45deg);
-    transition: color 0.2s var(--ease), transform 0.2s var(--ease);
-  }
-  #projects .card:hover .card-arrow {
-    color: var(--accent);
-    transform: rotate(-45deg) translateX(3px);
-  }
-  #projects .card-desc {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    line-height: 1.6;
-  }
-  #projects .card-foot {
-    margin-top: auto;
-    padding-top: 0.6rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-  }
-  #projects .card-tags {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.01em;
-    color: var(--text-faint);
-  }
-  #projects .card-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-  }
-  #projects .card-chip {
-    position: relative;
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    padding: 0.28rem 0.6rem;
-    border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    transition: background 0.15s var(--ease);
-  }
-  #projects .card-chip:hover {
-    background: color-mix(in srgb, var(--accent) 22%, transparent);
-  }
-
-  /* Staggered fade-in for the freshly injected cards (they aren't observed by
-     the BaseLayout data-reveal observer, which only runs once at page load). */
-  @media (prefers-reduced-motion: no-preference) {
-    #projects .card {
-      animation: projCardIn 0.4s var(--ease) both;
-      animation-delay: calc(var(--i, 0) * 45ms);
+    .hero-photo {
+      order: -1;
     }
-    @keyframes projCardIn {
-      from {
-        opacity: 0;
-        transform: translateY(12px);
-      }
-      to {
-        opacity: 1;
-        transform: none;
-      }
+    .hero-photo img {
+      max-width: 240px;
+    }
+    /* Two columns: wide banners top & bottom, tall pairs between — still
+       equal area (2 cells) per tile. */
+    .card-grid {
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(6, 10rem);
+      grid-template-areas:
+        'a a'
+        'b c'
+        'b c'
+        'd e'
+        'd e'
+        'f f';
+    }
+  }
+  @media (max-width: 620px) {
+    .skills-grid {
+      grid-template-columns: 1fr;
+    }
+    /* Single column: reset the bento so cards stack at natural height. */
+    .card-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: none;
+      grid-auto-rows: auto;
+      grid-template-areas: none;
+    }
+    .card:nth-child(1),
+    .card:nth-child(2),
+    .card:nth-child(3),
+    .card:nth-child(4),
+    .card:nth-child(5),
+    .card:nth-child(6) {
+      grid-area: auto;
+    }
+    .post-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.6rem;
     }
   }
 </style>
